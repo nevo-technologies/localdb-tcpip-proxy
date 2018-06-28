@@ -1,0 +1,19 @@
+{
+  "name": "localdb-tcp",
+  "version": "1.0.0",
+  "description": "Expose a localdb instance over a TCP port",
+  "main": "index.js",
+  "engines": {
+    "node": ">=8"
+  },
+  "os": [
+    "win32"
+  ],
+  "scripts": {},
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "localdb-api": "file:../api",
+    "minimist": "^1.2.0"
+  }
+}
