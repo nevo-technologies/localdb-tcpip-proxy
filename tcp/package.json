@@ -9,9 +9,15 @@
   "os": [
     "win32"
   ],
-  "scripts": {},
+  "scripts": {
+    "refresh-api": "npm rm --no-save localdb-api && npm i --no-save ../localdb-api"
+  },
   "author": "",
   "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nevo-technologies/localdb-tcpip-proxy"
+  },
   "dependencies": {
     "localdb-api": "file:../api",
     "minimist": "^1.2.0"
