@@ -72,7 +72,7 @@ namespace toy
 		h.setProp(res, "name", h.string(info.wszInstanceName));
 		if (nonBlank(info.wszSharedInstanceName))
 			h.setProp(res, "sharedName", h.string(info.wszSharedInstanceName));
-		if (info.bIsRunning)
+		if (nonBlank(info.wszConnection))
 			h.setProp(res, "connectionString", h.string(info.wszConnection));
 		h.setProp(res, "running", h.boolean(info.bIsRunning));
 		h.setProp(res, "automatic", h.boolean(info.bIsAutomatic));
