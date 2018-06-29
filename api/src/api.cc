@@ -6,6 +6,7 @@
 
 namespace toy
 {
+	using v8::Array;
 	using v8::Boolean;
 	using v8::Exception;
 	using v8::FunctionCallbackInfo;
@@ -31,6 +32,7 @@ namespace toy
 		Local<Number> number(T);
 		Local<String> string(const char*); // utf8
 		Local<String> string(const WCHAR*); // utf16
+		Local<Array> array(int);
 		Local<Object> object();
 
 		void setProp(Local<Object>, const char*, Local<Value>);
@@ -153,10 +155,44 @@ namespace toy
 		h.apiFailed(hr, "LocalDBStopInstance");
 	}
 
+	void listInstanceNames(const FunctionCallbackInfo<Value>& args) {
+		Helper h(args.GetIsolate());
+
+		DWORD n = 0;
+		// count
+		HRESULT hr = LocalDBGetInstances(NULL, &n);
+		if (LOCALDB_ERROR_INSUFFICIENT_BUFFER != hr && h.apiFailed(hr, "LocalDBGetInstances")) return;
+		if (n < 1) {
+			args.GetReturnValue().Set(h.array(0));
+			return;
+		}
+
+		Local<Value> oom = Exception::Error(h.string("Failed to allocate name buffer"));
+		PTLocalDBInstanceName buf = (PTLocalDBInstanceName) malloc(n * sizeof(TLocalDBInstanceName));
+		if (!buf) { // now what
+			h.throwError(oom);
+			return;
+		}
+
+		// actual names
+		if (h.apiFailed((LocalDBGetInstances(buf, &n)), "LocalDBGetInstances")) {
+			free(buf);
+			return;
+		}
+
+		Local<Array> names = h.array((int) n);
+		for (int i = 0; i < n; i++)
+			names->Set(h.number(i), h.string(buf[i]));
+		free(buf);
+		
+		args.GetReturnValue().Set(names);
+	}
+
 	void init(Local<Object> exports) {
 		NODE_SET_METHOD(exports, "describeInstance", describeInstance);
 		NODE_SET_METHOD(exports, "startInstance", startInstance);
 		NODE_SET_METHOD(exports, "stopInstance", stopInstance);
+		NODE_SET_METHOD(exports, "listInstanceNames", listInstanceNames);
 	}
 
 	NODE_MODULE(NODE_GYP_MODULE_NAME, init)
@@ -193,6 +229,9 @@ namespace toy
 	}
 	Local<String> Helper::string(const WCHAR* s) {
 		return String::NewFromTwoByte(isolate, (uint16_t*) s, String::NewStringType::kNormalString);
+	}
+	Local<Array> Helper::array(int len) {
+		return Array::New(isolate, len);
 	}
 	Local<Object> Helper::object() {
 		return Object::New(isolate);
