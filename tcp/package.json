@@ -10,7 +10,7 @@
     "win32"
   ],
   "scripts": {
-    "refresh-api": "npm rm --no-save localdb-api && npm i --no-save ../localdb-api"
+    "refresh-api": "npm rm --no-save localdb-api && npm i --no-save ../api"
   },
   "author": "",
   "license": "ISC",
