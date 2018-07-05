@@ -67,7 +67,8 @@ namespace toy
 		HRESULT hr = LocalDBGetInstanceInfo(wname, &info, sizeof(LocalDBInstanceInfo));
 		if (h.apiFailed(hr, "LocalDBGetInstanceInfo")) return;
 
-		if (!info.bExists) return;
+		bool exists = info.bExists, automatic = info.bIsAutomatic;
+		if (!(exists || automatic)) return;
 
 		Local<Object> res = h.object();
 
@@ -77,9 +78,10 @@ namespace toy
 		if (nonBlank(info.wszConnection))
 			h.setProp(res, "connectionString", h.string(info.wszConnection));
 		h.setProp(res, "running", h.boolean(info.bIsRunning));
-		h.setProp(res, "automatic", h.boolean(info.bIsAutomatic));
+		h.setProp(res, "automatic", h.boolean(automatic));
+		h.setProp(res, "exists", h.boolean(exists));
 		h.setProp(res, "corrupted", h.boolean(info.bConfigurationCorrupted));
-		if (!info.bConfigurationCorrupted) {
+		if (exists) {
 			char version[64];
 			sprintf(version, "%d.%d.%d.%d", info.dwMajor, info.dwMinor, info.dwBuild, info.dwRevision);
 
