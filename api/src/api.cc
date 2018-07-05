@@ -40,6 +40,10 @@ namespace toy
 		// throw an Error on failed call
 		bool apiFailed(HRESULT, const char* method);
 
+		// throw an Error on allocation failed
+		template<class T>
+		T* allocateList(DWORD, const char* errMsg);
+
 	private:
 		Isolate* isolate;
 		char16_t nameBuf[1 + MAX_LOCALDB_INSTANCE_NAME_LENGTH];
@@ -158,36 +162,62 @@ namespace toy
 	}
 
 	void listInstanceNames(const FunctionCallbackInfo<Value>& args) {
+		const char* method = "LocalDBGetInstances";
+		
 		Helper h(args.GetIsolate());
-
 		DWORD n = 0;
 		// count
 		HRESULT hr = LocalDBGetInstances(NULL, &n);
-		if (LOCALDB_ERROR_INSUFFICIENT_BUFFER != hr && h.apiFailed(hr, "LocalDBGetInstances")) return;
+		if (LOCALDB_ERROR_INSUFFICIENT_BUFFER != hr && h.apiFailed(hr, method)) return;
 		if (n < 1) {
 			args.GetReturnValue().Set(h.array(0));
 			return;
 		}
 
-		Local<Value> oom = Exception::Error(h.string("Failed to allocate name buffer"));
-		PTLocalDBInstanceName buf = (PTLocalDBInstanceName) malloc(n * sizeof(TLocalDBInstanceName));
-		if (!buf) { // now what
-			h.throwError(oom);
-			return;
-		}
+		PTLocalDBInstanceName buf = h.allocateList<TLocalDBInstanceName>(n, "Failed to allocate name buffer");
+		if (!buf) return;
 
 		// actual names
-		if (h.apiFailed((LocalDBGetInstances(buf, &n)), "LocalDBGetInstances")) {
+		if (h.apiFailed((LocalDBGetInstances(buf, &n)), method)) {
 			free(buf);
 			return;
 		}
 
 		Local<Array> names = h.array((int) n);
-		for (int i = 0; i < n; i++)
+		for (DWORD i = 0; i < n; i++)
 			names->Set(h.number(i), h.string(buf[i]));
 		free(buf);
 		
 		args.GetReturnValue().Set(names);
+	}
+
+	void listVersions(const FunctionCallbackInfo<Value>& args) {
+		const char* method = "LocalDBGetVersions";
+		
+		Helper h(args.GetIsolate());
+		DWORD n = 0;
+		// count
+		HRESULT hr = LocalDBGetVersions(NULL, &n);
+		if (LOCALDB_ERROR_INSUFFICIENT_BUFFER != hr && h.apiFailed(hr, method)) return;
+		if (n < 1) {
+			args.GetReturnValue().Set(h.array(0));
+			return;
+		}
+
+		PTLocalDBVersion buf = h.allocateList<TLocalDBVersion>(n, "Failed to allocate version buffer");
+		if (!buf) return;
+
+		if (h.apiFailed((LocalDBGetVersions(buf, &n)), method)) {
+			free(buf);
+			return;
+		}
+
+		Local<Array> versions = h.array((int) n);
+		for (DWORD i = 0; i < n; i++)
+			versions->Set(h.number(i), h.string(buf[i]));
+		free(buf);
+		
+		args.GetReturnValue().Set(versions);
 	}
 
 	void init(Local<Object> exports) {
@@ -195,6 +225,8 @@ namespace toy
 		NODE_SET_METHOD(exports, "startInstance", startInstance);
 		NODE_SET_METHOD(exports, "stopInstance", stopInstance);
 		NODE_SET_METHOD(exports, "listInstanceNames", listInstanceNames);
+
+		NODE_SET_METHOD(exports, "listVersions", listVersions);
 	}
 
 	NODE_MODULE(NODE_GYP_MODULE_NAME, init)
@@ -295,5 +327,15 @@ namespace toy
 
 		throwError(Exception::Error(string(msg)));
 		return true;
+	}
+
+	template<class T>
+	T* Helper::allocateList(DWORD n, const char* errMsg) {
+		Local<Value> oom = Exception::Error(string(errMsg));
+
+		T* buf = (T*) malloc(n * sizeof(T));
+		if (!buf)
+			throwError(oom);
+		return buf;
 	}
 }
