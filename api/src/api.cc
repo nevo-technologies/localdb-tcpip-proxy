@@ -82,7 +82,7 @@ namespace toy
 		h.setProp(res, "exists", h.boolean(exists));
 		h.setProp(res, "corrupted", h.boolean(info.bConfigurationCorrupted));
 		if (exists) {
-			char version[64];
+			char version[1 + MAX_LOCALDB_VERSION_LENGTH];
 			sprintf(version, "%d.%d.%d.%d", info.dwMajor, info.dwMinor, info.dwBuild, info.dwRevision);
 
 			h.setProp(res, "version", h.string(version));

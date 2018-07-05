@@ -13,7 +13,8 @@
     "clean": "node-gyp clean",
     "configure": "node-gyp configure",
     "build": "node-gyp build",
-    "rebuild": "node-gyp rebuild"
+    "rebuild": "node-gyp rebuild",
+    "test": "node test.js",
   },
   "author": "",
   "license": "ISC",
