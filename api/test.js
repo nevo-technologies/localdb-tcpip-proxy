@@ -1,7 +1,10 @@
 const api = require('bindings')('localdb_api');
 
 let versions = api.listVersions();
-console.log('installed versions:', versions.join(', '));
+for (let version of versions) {
+	let info = api.describeVersion(version);
+	console.log('[%s]', version, info);
+}
 
 let names = api.listInstanceNames();
 for (let name of names) {

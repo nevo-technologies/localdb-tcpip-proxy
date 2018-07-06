@@ -196,6 +196,36 @@ namespace toy
 		args.GetReturnValue().Set(versions);
 	}
 
+	void describeVersion(const FunctionCallbackInfo<Value>& args) {
+		Helper h(args.GetIsolate());
+		if (args.Length() < 1 || !args[0]->IsString()) {
+			h.throwError(Exception::RangeError(h.string("expected a version name")));
+			return;
+		}
+
+		Local<String> version = args[0].As<String>();
+		if (version->Length() < 1 || version->Length() > MAX_LOCALDB_VERSION_LENGTH) {
+			h.throwError(Exception::RangeError(h.string("Invalid a version name")));
+			return;
+		}
+
+		WCHAR buf[1 + MAX_LOCALDB_VERSION_LENGTH];
+		version->Write((uint16_t*) buf);
+
+		LocalDBVersionInfo info;
+		if (h.apiFailed(LocalDBGetVersionInfo(buf, &info, sizeof(LocalDBVersionInfo)), "LocalDBGetVersionInfo")) return;
+
+		if (!info.bExists) return; // legal name but not installed
+
+		Local<Object> v = h.object();
+		h.setProp(v, "name", h.string(info.wszVersion));
+		h.setProp(v, "major", h.number(info.dwMajor));
+		h.setProp(v, "minor", h.number(info.dwMinor));
+		h.setProp(v, "build", h.number(info.dwBuild));
+		h.setProp(v, "revision", h.number(info.dwRevision));
+		args.GetReturnValue().Set(v);
+	}
+
 	void init(Local<Object> exports) {
 		NODE_SET_METHOD(exports, "describeInstance", describeInstance);
 		NODE_SET_METHOD(exports, "startInstance", startInstance);
@@ -203,6 +233,7 @@ namespace toy
 		NODE_SET_METHOD(exports, "listInstanceNames", listInstanceNames);
 
 		NODE_SET_METHOD(exports, "listVersions", listVersions);
+		NODE_SET_METHOD(exports, "describeVersion", describeVersion);
 	}
 
 	NODE_MODULE(NODE_GYP_MODULE_NAME, init)
@@ -214,7 +245,7 @@ namespace toy
 
 	const PCWSTR Helper::validateName(const FunctionCallbackInfo<Value>& args, int n) {
 		if (args.Length() < n || !args[n]->IsString()) {
-			isolate->ThrowException(Exception::RangeError(string("expected an instance name")));
+			throwError(Exception::RangeError(string("expected an instance name")));
 			return NULL;
 		}
 		
