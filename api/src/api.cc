@@ -185,6 +185,7 @@ namespace toy
 		Helper h(args.GetIsolate());
 		TLocalDBVersion* buf = NULL;
 		long n = h.executeList(LocalDBGetVersions, &buf, "LocalDBGetVersions", "Failed to allocate version buffer");
+		if (n < 0) return;
 
 		Local<Array> versions = h.array((int) n);
 		for (int i = 0; i < n; i++)
