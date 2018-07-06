@@ -40,9 +40,14 @@ namespace toy
 		// throw an Error on failed call
 		bool apiFailed(HRESULT, const char* method);
 
-		// throw an Error on allocation failed
+		// calls fn twice (first to count), returns number of items allocated into buffer (if any), negative on error
 		template<class T>
-		T* allocateList(DWORD, const char* errMsg);
+		long executeList(
+			HRESULT (*fn)(T*, DWORD*),
+			T** bufp,
+			const char* method,
+			const char* allocateFailedMsg
+		);
 
 	private:
 		Isolate* isolate;
@@ -162,60 +167,30 @@ namespace toy
 	}
 
 	void listInstanceNames(const FunctionCallbackInfo<Value>& args) {
-		const char* method = "LocalDBGetInstances";
-		
 		Helper h(args.GetIsolate());
-		DWORD n = 0;
-		// count
-		HRESULT hr = LocalDBGetInstances(NULL, &n);
-		if (LOCALDB_ERROR_INSUFFICIENT_BUFFER != hr && h.apiFailed(hr, method)) return;
-		if (n < 1) {
-			args.GetReturnValue().Set(h.array(0));
-			return;
-		}
-
-		PTLocalDBInstanceName buf = h.allocateList<TLocalDBInstanceName>(n, "Failed to allocate name buffer");
-		if (!buf) return;
-
-		// actual names
-		if (h.apiFailed((LocalDBGetInstances(buf, &n)), method)) {
-			free(buf);
-			return;
-		}
+		TLocalDBInstanceName* buf = NULL;
+		long n = h.executeList(LocalDBGetInstances, &buf, "LocalDBGetInstances", "Failed to allocate name buffer");
+		if (n < 0) return;
 
 		Local<Array> names = h.array((int) n);
-		for (DWORD i = 0; i < n; i++)
+		for (int i = 0; i < n; i++)
 			names->Set(h.number(i), h.string(buf[i]));
-		free(buf);
+		if (n > 0)
+			free(buf);
 		
 		args.GetReturnValue().Set(names);
 	}
 
 	void listVersions(const FunctionCallbackInfo<Value>& args) {
-		const char* method = "LocalDBGetVersions";
-		
 		Helper h(args.GetIsolate());
-		DWORD n = 0;
-		// count
-		HRESULT hr = LocalDBGetVersions(NULL, &n);
-		if (LOCALDB_ERROR_INSUFFICIENT_BUFFER != hr && h.apiFailed(hr, method)) return;
-		if (n < 1) {
-			args.GetReturnValue().Set(h.array(0));
-			return;
-		}
-
-		PTLocalDBVersion buf = h.allocateList<TLocalDBVersion>(n, "Failed to allocate version buffer");
-		if (!buf) return;
-
-		if (h.apiFailed((LocalDBGetVersions(buf, &n)), method)) {
-			free(buf);
-			return;
-		}
+		TLocalDBVersion* buf = NULL;
+		long n = h.executeList(LocalDBGetVersions, &buf, "LocalDBGetVersions", "Failed to allocate version buffer");
 
 		Local<Array> versions = h.array((int) n);
-		for (DWORD i = 0; i < n; i++)
+		for (int i = 0; i < n; i++)
 			versions->Set(h.number(i), h.string(buf[i]));
-		free(buf);
+		if (n > 0)
+			free(buf);
 		
 		args.GetReturnValue().Set(versions);
 	}
@@ -330,12 +305,33 @@ namespace toy
 	}
 
 	template<class T>
-	T* Helper::allocateList(DWORD n, const char* errMsg) {
-		Local<Value> oom = Exception::Error(string(errMsg));
+	long Helper::executeList(
+		HRESULT (*fn)(T*, DWORD*),
+		T** bufp,
+		const char* method,
+		const char* allocateFailedMsg
+	) {
+		// count
+		DWORD n = 0;
+		HRESULT hr = (*fn)(NULL, &n);
+		if (LOCALDB_ERROR_INSUFFICIENT_BUFFER != hr && apiFailed(hr, method)) return -1;
+		if (n < 1) return 0; // dont allocate anything
 
+		// allocate
+		Local<Value> oom = Exception::Error(string(allocateFailedMsg));
 		T* buf = (T*) malloc(n * sizeof(T));
-		if (!buf)
+		if (!buf) {
 			throwError(oom);
-		return buf;
+			return -1;
+		}
+
+		// populate
+		if (apiFailed((*fn)(buf, &n), method)) {
+			free(buf);
+			return -1;
+		}
+
+		*bufp = buf;
+		return n;
 	}
 }
