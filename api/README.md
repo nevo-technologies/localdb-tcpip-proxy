@@ -40,6 +40,21 @@ Refer to a shared instance as `.\foo`
   }
   ```
 
+* __listVersions__()
+  installed versions in `major`.`minor` format
+
+* __describeVersion__(name)
+  full version version given (at least) a `major`.`minor` version name, nil if not installed
+  ```javascript
+  {
+    name: string,
+    major: number,
+    minor: number,
+    build: number,
+    revision: number
+  }
+  ```
+
 ## TODO
 
 * Implement remaining functions
