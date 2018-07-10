@@ -42,14 +42,15 @@ console.log('%s running on pipe: %s', info.name, pipe);
 
 let clients = []; // for shutdown
 let server = net.createServer((tcp) => {
-	console.log('[%d] client connected', tcp.remotePort);
+	let tag = tcp.remotePort;
+	console.log('[%d] client connected', tag);
 	clients.push(tcp);
 
 	let np = net.createConnection({path: pipe});
 	tcp.on('data', (x) => np.write(x));
-	tcp.on('error', (e) => console.error('[%d]:', tcp.remotePort, e));
+	tcp.on('error', (e) => console.error('[%d]:', tag, e));
 	tcp.on('close', (had_error) => {
-		console.log('[%d] client %s', tcp.remotePort, stopping ? 'destroyed' : 'disconnected');
+		console.log('[%d] client %s', tag, stopping ? 'destroyed' : 'disconnected');
 
 		let off = clients.indexOf(tcp);
 		off > -1 && clients.splice(off, 1);
@@ -58,9 +59,8 @@ let server = net.createServer((tcp) => {
 
 	np.on('data', (x) => tcp.write(x));
 	np.on('error', (e) => {
-		if (stopSql && stopping) return;
-		// assume someone else stopped instance and give up
-		bail('[%d] pipe error - TERMINATING: ', tcp.remotePort, e);
+		if (!(stopSql && stopping && 'EPIPE' === e.code))
+			console.error('[%d] pipe error:', tag, e);
 	});
 });
 server.on('close', () => {
