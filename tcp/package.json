@@ -19,7 +19,7 @@
     "url": "https://github.com/nevo-technologies/localdb-tcpip-proxy"
   },
   "dependencies": {
-    "localdb-api": "file:../api",
-    "minimist": "^1.2.0"
+    "commander": "^2.17.1",
+    "localdb-api": "file:../api"
   }
 }
