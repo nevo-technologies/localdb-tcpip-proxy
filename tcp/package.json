@@ -4,7 +4,7 @@
   "description": "Expose a localdb instance over a TCP port",
   "main": "index.js",
   "engines": {
-    "node": ">=8"
+    "node": ">=8 <=10"
   },
   "os": [
     "win32"
